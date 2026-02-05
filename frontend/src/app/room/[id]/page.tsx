@@ -24,6 +24,7 @@ export default function RoomPage() {
   const [scoringPending, setScoringPending] = useState(false);
   const [pendingTxHash, setPendingTxHash] = useState<string | null>(null);
   const [txStatus, setTxStatus] = useState<string | null>(null);
+  const [pollCount, setPollCount] = useState(0);
 
   // Check if scoring completed (is_scored changed to true)
   useEffect(() => {
@@ -32,6 +33,27 @@ export default function RoomPage() {
       console.log("Scoring completed! is_scored is now true.");
     }
   }, [room?.is_scored, scoringPending]);
+
+  // Poll more frequently when scoring is pending
+  useEffect(() => {
+    if (!scoringPending) {
+      setPollCount(0);
+      return;
+    }
+    console.log("Scoring pending - starting aggressive polling...");
+    const fastPoll = setInterval(async () => {
+      setPollCount(prev => prev + 1);
+      console.log("Fast poll: checking for is_scored update...");
+      await refetch();
+      // Log current room state for debugging
+      console.log("Current room state after refetch:", {
+        is_scored: room?.is_scored,
+        current_round: room?.current_round,
+        prompts_submitted: room?.prompts_submitted
+      });
+    }, 3000); // Poll every 3 seconds while scoring
+    return () => clearInterval(fastPoll);
+  }, [scoringPending, refetch, room]);
 
   const doAction = useCallback(
     async (name: string, fn: string, args: unknown[]) => {
@@ -213,17 +235,30 @@ export default function RoomPage() {
               <p className="text-sm text-gray-500 mb-2">
                 Not all players submitted? Score with current submissions.
               </p>
-              <button
-                onClick={() =>
-                  doAction("score", "score_round", [BigInt(roomId)])
-                }
-                disabled={actionLoading === "score"}
-                className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-              >
-                {actionLoading === "score"
-                  ? "Submitting scoring request..."
-                  : "Score Now (Skip Waiting)"}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <button
+                  onClick={() =>
+                    doAction("quickScore", "score_round_quick", [BigInt(roomId)])
+                  }
+                  disabled={!!actionLoading}
+                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                >
+                  {actionLoading === "quickScore"
+                    ? "Scoring..."
+                    : "Quick Score (Instant)"}
+                </button>
+                <button
+                  onClick={() =>
+                    doAction("score", "score_round", [BigInt(roomId)])
+                  }
+                  disabled={!!actionLoading}
+                  className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                >
+                  {actionLoading === "score"
+                    ? "Submitting..."
+                    : "AI Score (2-5 min)"}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -281,6 +316,18 @@ export default function RoomPage() {
                   </p>
                 </div>
               )}
+              <button
+                onClick={refetch}
+                className="mt-3 text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-4 py-2 rounded"
+              >
+                Refresh State
+              </button>
+              {pollCount > 10 && (
+                <div className="mt-3 p-2 bg-orange-100 rounded text-xs text-orange-700">
+                  <p className="font-medium">Taking longer than expected?</p>
+                  <p>The transaction may have completed. Try clicking &quot;Refresh State&quot; or check GenStudio for confirmation.</p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-xl shadow-md border border-gray-100 p-8 text-center">
@@ -288,19 +335,35 @@ export default function RoomPage() {
                 All prompts submitted!
               </div>
               <p className="text-sm text-gray-500 mb-4">
-                Trigger LLM scoring via Optimistic Democracy consensus.
+                Choose how to score this round:
               </p>
-              <button
-                onClick={() =>
-                  doAction("score", "score_round", [BigInt(roomId)])
-                }
-                disabled={actionLoading === "score"}
-                className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-              >
-                {actionLoading === "score"
-                  ? "Submitting scoring request..."
-                  : "Score Round"}
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={() =>
+                    doAction("quickScore", "score_round_quick", [BigInt(roomId)])
+                  }
+                  disabled={!!actionLoading}
+                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                >
+                  {actionLoading === "quickScore"
+                    ? "Scoring..."
+                    : "Quick Score (Instant)"}
+                </button>
+                <button
+                  onClick={() =>
+                    doAction("score", "score_round", [BigInt(roomId)])
+                  }
+                  disabled={!!actionLoading}
+                  className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                >
+                  {actionLoading === "score"
+                    ? "Submitting..."
+                    : "AI Score (2-5 min)"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-3">
+                Quick Score uses prompt length. AI Score uses LLM consensus.
+              </p>
             </div>
           )}
         </div>

@@ -349,6 +349,48 @@ Judge on: creativity, relevance to challenge, and quality. Return ONLY valid JSO
         self.rooms[room_id].is_scored = True
 
     @gl.public.write
+    def score_round_quick(self, room_id: u32):
+        """Quick scoring without LLM - uses prompt length as a simple heuristic."""
+        room = gl.storage.copy_to_memory(self.rooms[room_id])
+        if room.current_round < 1 or room.current_round > TOTAL_ROUNDS:
+            raise Exception("No active round to score")
+        if room.is_scored:
+            raise Exception("Round already scored")
+        if room.prompts_submitted == 0:
+            raise Exception("At least one player must submit a prompt")
+
+        # Gather submitted prompts
+        player_prompts = []
+        for i in range(room.player_count):
+            player_key = self._player_key(room_id, i)
+            p = gl.storage.copy_to_memory(self.room_players[player_key])
+            if p.has_submitted and len(p.prompt.strip()) > 0:
+                player_prompts.append({"index": i, "prompt": p.prompt, "length": len(p.prompt.strip())})
+            else:
+                self.room_players[player_key].round_score = 0
+
+        if len(player_prompts) == 0:
+            self.rooms[room_id].is_scored = True
+            return
+
+        # Simple scoring: base 50 + bonus based on prompt length (max 50 bonus)
+        # Longer, more thoughtful prompts get higher scores
+        max_len = max(pp["length"] for pp in player_prompts)
+        for pp in player_prompts:
+            # Score from 50-100 based on relative length
+            length_ratio = pp["length"] / max_len if max_len > 0 else 1
+            score = 50 + int(length_ratio * 50)
+            # Round to nearest 10
+            score = ((score + 5) // 10) * 10
+            score = max(20, min(100, score))  # Clamp to 20-100
+
+            player_key = self._player_key(room_id, pp["index"])
+            self.room_players[player_key].round_score = score
+            self.room_players[player_key].total_score += score
+
+        self.rooms[room_id].is_scored = True
+
+    @gl.public.write
     def advance_round(self, room_id: u32):
         room = self.rooms[room_id]
         if room.current_round < 1 or room.current_round > TOTAL_ROUNDS:
