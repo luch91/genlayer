@@ -1,0 +1,19 @@
+{
+  "name": "prompt-duel",
+  "version": "1.0.0",
+  "description": "Prompt Duel - A multiplayer prompt engineering mini-game on GenLayer",
+  "private": true,
+  "scripts": {
+    "deploy": "npx tsx deploy/deployScript.ts",
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "test": "gltest test/"
+  },
+  "dependencies": {
+    "genlayer-js": "latest"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.6.0"
+  }
+}
