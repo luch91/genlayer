@@ -38,6 +38,15 @@ export function getGamePhase(room: Room): GamePhase {
   if (room.is_scored) return "results";
   // Ready to score when all players have submitted
   if (room.prompts_submitted >= room.player_count) return "scoring";
-  // Still waiting for submissions
+  // Still in prompting phase
   return "prompting";
+}
+
+// Helper to check if we can force-score (at least one submission but not all)
+export function canForceScore(room: Room): boolean {
+  return room.current_round >= 1 &&
+         room.current_round <= 3 &&
+         !room.is_scored &&
+         room.prompts_submitted > 0 &&
+         room.prompts_submitted < room.player_count;
 }

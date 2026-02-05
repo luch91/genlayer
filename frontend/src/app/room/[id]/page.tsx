@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useGenLayer } from "@/hooks/useGenLayer";
 import { useGameState } from "@/hooks/useGameState";
 import { writeContract, checkTransactionStatus } from "@/lib/contract";
-import { getGamePhase } from "@/types/game";
+import { getGamePhase, canForceScore } from "@/types/game";
 import { ChallengeCard } from "@/components/ChallengeCard";
 import { PromptInput } from "@/components/PromptInput";
 import { GameTimer } from "@/components/GameTimer";
@@ -205,6 +205,25 @@ export default function RoomPage() {
               <p className="text-sm text-blue-600">
                 {room.prompts_submitted}/{room.player_count} players have submitted
               </p>
+            </div>
+          )}
+          {/* Force Score button - score with partial submissions */}
+          {canForceScore(room) && isInRoom && !scoringPending && (
+            <div className="text-center pt-4 border-t border-gray-200">
+              <p className="text-sm text-gray-500 mb-2">
+                Not all players submitted? Score with current submissions.
+              </p>
+              <button
+                onClick={() =>
+                  doAction("score", "score_round", [BigInt(roomId)])
+                }
+                disabled={actionLoading === "score"}
+                className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              >
+                {actionLoading === "score"
+                  ? "Submitting scoring request..."
+                  : "Score Now (Skip Waiting)"}
+              </button>
             </div>
           )}
         </div>

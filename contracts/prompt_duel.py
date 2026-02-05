@@ -290,11 +290,11 @@ class PromptDuel(gl.Contract):
             raise Exception("No active round to score")
         if room.is_scored:
             raise Exception("Round already scored")
-        # All players must submit before scoring
-        if room.prompts_submitted < room.player_count:
-            raise Exception("Not all players have submitted prompts yet")
+        # At least one player must submit before scoring
+        if room.prompts_submitted == 0:
+            raise Exception("At least one player must submit a prompt")
 
-        # Gather all submitted prompts
+        # Gather submitted prompts (non-submitters get 0 points)
         challenge = _get_challenge_text(room.challenge_seed, room.current_round)
         player_prompts = []
         submitted_indices = []
