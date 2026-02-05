@@ -325,18 +325,16 @@ class PromptDuel(gl.Contract):
         )
 
         # ── LLM Scoring via Optimistic Democracy consensus ──────────
-        # Only score players who actually submitted
+        # Use coarse scoring (20-point increments) for better validator consensus
         scoring_result = gl.eq_principle.prompt_non_comparative(
             input=prompts_text,
             task=f"""Score these {num_submitted} prompts for the challenge: "{challenge}"
 
-Rate each from 0-100. Output ONLY JSON like:
-{{"scores": [{{"player": 0, "score": 75}}, {{"player": 1, "score": 80}}]}}
+Use ONLY these scores: 20 (poor), 40 (below average), 60 (average), 80 (good), 100 (excellent).
+Output JSON: {{"scores": [{{"player": 0, "score": 60}}, {{"player": 1, "score": 80}}]}}
 
-Scoring: creativity (30%), relevance (30%), quality (40%). Return valid JSON only.""",
-            criteria="""Output must be valid JSON with a "scores" array.
-Each entry needs "player" (integer) and "score" (integer 0-100, multiples of 5).
-Only score players listed in the input.""",
+Judge on: creativity, relevance to challenge, and quality. Return ONLY valid JSON.""",
+            criteria="""Valid JSON with "scores" array. Each entry has "player" (int) and "score" (20, 40, 60, 80, or 100 only).""",
         )
 
         # Parse scores and update state
