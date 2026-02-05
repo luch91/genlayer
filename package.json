@@ -6,7 +6,7 @@
   "scripts": {
     "deploy": "npx tsx deploy/deployScript.ts",
     "dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
+    "build": "cd frontend && npm install && npm run build",
     "test": "gltest test/"
   },
   "dependencies": {
